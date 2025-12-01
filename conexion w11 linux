@@ -1,0 +1,92 @@
+¡Claro\! Aquí tienes el plan de acción en formato Markdown para arrancar tu Thin Client usando la infraestructura PXE/NFS de **Linux** para, finalmente, conectarte a **Windows 11** vía RDP.
+
+Este documento resume los pasos necesarios para modificar la imagen base de Linux y configurar el autoarranque.
+
+-----
+
+## 💻 Plan de Conexión a Windows 11 vía RDP (usando PXE Linux)
+
+El objetivo es usar la robustez de **PXE y NFS** para cargar rápidamente un sistema operativo Linux minimalista en la RAM del cliente, cuyo único propósito es lanzar el cliente RDP (`xfreerdp`) para acceder a un servidor con Windows 11.
+
+### 1\. 🛠️ Modificaciones en la Imagen Base (RootFS)
+
+Debes volver a ingresar al entorno `chroot` de la imagen que creaste en `/export/thinclient` para instalar el software necesario y el script de autoarranque.
+
+**⚠️ Instrucciones para ejecutar DENTRO del `chroot`:**
+
+| Tarea | Comandos (Dentro del Chroot) |
+| :--- | :--- |
+| **Instalar RDP y Gráficos** | Instalar el servidor gráfico Xorg, un gestor de ventanas ligero (`openbox`), y el cliente RDP (`xfreerdp`).<br> `apt update`<br>`apt install -y xorg openbox xserver-xorg-input-all xterm freerdp2-x11` |
+| **Crear Usuario Limitado** | Es buena práctica ejecutar el cliente RDP con un usuario sin privilegios. <br> `adduser thinuser --disabled-password --gecos ""` |
+| **Limpieza de `fstab`** | Asegura que el archivo `/etc/fstab` esté vacío, ya que el *rootfs* se monta vía NFS, no localmente.<br> `echo "" > /etc/fstab` |
+
+### 2\. 🚀 Configuración del Autoarranque
+
+Para que el cliente se conecte automáticamente, debes configurar un script que se ejecute al iniciar la sesión gráfica del usuario.
+
+Crea el archivo `.xinitrc` en el directorio principal del usuario (`thinuser`) para que se ejecute automáticamente después de iniciar el servidor X.
+
+```bash
+# Comando a ejecutar DENTRO del chroot para crear el script
+sudo nano /home/thinuser/.xinitrc
+```
+
+**Contenido de `/home/thinuser/.xinitrc`:**
+
+```bash
+#!/bin/bash
+# Script de autoarranque y conexión RDP
+
+# 1. Configuración del Entorno Gráfico (Opcional)
+xset s off # Deshabilitar salvapantallas
+xset -dpms # Deshabilitar gestión de energía
+
+# 2. Bucle de Conexión y Reconexión
+# Esto asegura que si la conexión RDP se cae, intentará reconectarse.
+while true; do
+    # ----------------------------------------------------
+    # Conexión RDP a Windows 11 (Ajusta la IP y credenciales)
+    # ----------------------------------------------------
+    # /v: Dirección del servidor RDS/Windows 11
+    # /u: Usuario de Windows
+    # /p: Contraseña
+    # /f: Modo pantalla completa (fullscreen)
+    xfreerdp /v:192.168.1.50 /u:MiDominio\\MiUsuario /p:MiContraseña /f /bpp:24
+    
+    # Esperar 5 segundos antes de intentar reconectar si la sesión se cierra
+    sleep 5
+done
+
+# Iniciar un gestor de ventanas básico como fallback (OpenBox)
+exec openbox-session
+```
+
+### 3\. Finalización del Chroot
+
+Sal del entorno y desmonta los sistemas de archivos virtuales:
+
+```bash
+# Ejecutar este comando dentro del chroot
+exit
+
+# Ejecutar estos comandos fuera del chroot (en el servidor)
+sudo umount /export/thinclient/dev
+sudo umount /export/thinclient/sys
+sudo umount /export/thinclient/proc
+
+# Si usaste qemu-static, desmontarlo también:
+# sudo umount /export/thinclient/usr/bin/qemu-amd64-static 
+```
+
+-----
+
+## ✅ Verificación del Flujo Final
+
+Una vez que el cliente arranca y carga el kernel Linux por PXE, el proceso será:
+
+1.  El kernel monta `/export/thinclient` vía NFS.
+2.  Linux arranca e inicia el servidor gráfico (Xorg).
+3.  El usuario `thinuser` inicia sesión automáticamente (si lo configuraste en LightDM o similar).
+4.  El script **`.xinitrc`** se ejecuta.
+5.  El comando **`xfreerdp`** se lanza, estableciendo la conexión con tu servidor de escritorio remoto.
+6.  El usuario final ve la pantalla de **Windows 11**.

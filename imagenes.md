@@ -208,3 +208,64 @@ sudo umount $EXPORT_DIR/proc
 echo "======================================================"
 echo "✅ Imagen Base Creada y Lista en $EXPORT_DIR"
 echo "======================================================"
+
+
+
+
+
+
+
+Pasos Finales de Configuración
+Asegúrate de que los siguientes puntos estén terminados antes de intentar el arranque del cliente:
+
+1. ⚙️ Finalizar la Imagen Base (NFS)
+Aunque debootstrap instaló el sistema, la configuración interna es crucial. Debes haber ejecutado los comandos críticos dentro del chroot para:
+
+Instalar el Kernel: Asegurarte de que el kernel (linux-image-amd64) esté instalado en el directorio /export/thinclient.
+
+Instalar Cliente Remoto: Instalar el cliente de conexión remota (ej., xfreerdp, rdesktop, o tu cliente VDI).
+
+Autoarranque: Crear el servicio o script que ejecutará automáticamente el cliente remoto al iniciar sesión (por ejemplo, iniciar OpenBox y luego lanzar la aplicación de conexión).
+
+Limpieza de fstab: Verificar que el archivo /export/thinclient/etc/fstab esté vacío o solo contenga las entradas de /proc y /sys, ya que el sistema de archivos raíz será montado por NFS.
+
+2. 🔌 Configuración del Servidor (NFS, TFTP, DHCP)
+Aplica los cambios de configuración del servidor que tienes en tu repositorio:
+
+Ajuste de NFS: Asegúrate de que /etc/exports contenga la línea para compartir el nuevo directorio:
+
+Bash
+
+sudo exportfs -a
+sudo systemctl restart nfs-kernel-server
+Ajuste de TFTP/PXELINUX: Copia el kernel y el initrd del nuevo sistema de archivos base al directorio /var/lib/tftpboot.
+
+Ejemplo: sudo cp /export/thinclient/boot/vmlinuz-* /var/lib/tftpboot/vmlinuz
+
+Ejemplo: sudo cp /export/thinclient/boot/initrd.img-* /var/lib/tftpboot/initrd.img
+
+Verificación de DHCP: Confirma que next-server y filename apunten correctamente a tu servidor y a pxelinux.0 en la configuración DHCP.
+
+🧪 Pruebas de Arranque y Diagnóstico
+Este es el paso final: probar el arranque en el cliente.
+
+1. Prueba de Conectividad PXE
+Enciende el Cliente: Configura la BIOS para arrancar desde la Red (PXE/LAN).
+
+Verificación DHCP: El cliente debería obtener una IP y el nombre del archivo de arranque (pxelinux.0).
+
+Verificación TFTP: El cliente debe descargar pxelinux.0 y luego el kernel (vmlinuz) y la initrd a la RAM. Si ves un menú, ¡es un buen signo!
+
+2. Prueba de Montaje NFS
+Si el kernel se carga, buscará el sistema de archivos raíz. Si la configuración en pxelinux.cfg/default es correcta (root=/dev/nfs nfsroot=...), debería montar el directorio compartido.
+
+Error Común: Si ves el error "Kernel panic: VFS: Unable to mount root fs on unknown-block(0,0)", significa que el kernel no pudo acceder a la red o al NFS. La imagen initrd probablemente no incluyó los módulos necesarios para la tarjeta de red del cliente o para NFS.
+
+3. Prueba de Operación Final
+Una vez que el sistema operativo se monta y arranca:
+
+Debe ejecutarse el script de inicio automático que configuraste.
+
+Debe aparecer la ventana del cliente de conexión remota (RDP/VDI).
+
+Si la prueba falla en cualquier momento, el diagnóstico se realiza siempre en el servidor, revisando los logs de DHCP, TFTP y NFS, y verificando los permisos de archivo

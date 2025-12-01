@@ -162,4 +162,4 @@ El proyecto ha implementado con éxito una solución avanzada de despliegue de *
   * **Anexo A:** Manual Operativo para iniciar un despliegue.
   * **Anexo B:** Capturas de la configuración de WDS y la consola de Gestión de Directivas de Grupo (GPO).
   * **Bibliografía:** Lista de fuentes técnicas.-----
-
+### https://github.com/lobato18/proyectoASIR_clientes_virtuale/tree/main

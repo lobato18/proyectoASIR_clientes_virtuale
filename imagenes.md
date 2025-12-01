@@ -115,3 +115,96 @@ sudo umount $EXPORT_DIR/dev
 
 
 echo "✅ Imagen Base Lista en $EXPORT_DIR"
+
+otro scrip necesario es el siguiente
+
+#!/bin/bash
+
+# Este script automatiza la creación de un sistema de archivos raíz (rootfs)
+# minimalista de Debian/Ubuntu para un cliente ligero PXE usando NFS.
+
+# --- CONFIGURACIÓN ---
+# Directorio donde se montará el sistema de archivos raíz (Debe coincidir con /etc/exports)
+EXPORT_DIR="/export/thinclient" 
+
+# Distribución a usar (ej. 'buster' para Debian 10, 'focal' para Ubuntu 20.04)
+# ¡ADVERTENCIA! Asegúrate de que esta distribución sea compatible con tu kernel PXE.
+DISTRO="buster" 
+
+# Arquitectura objetivo (amd64 es la más común para thin clients modernos)
+ARCH="amd64" 
+
+# Repositorio de la distribución
+REPO="http://deb.debian.org/debian/"
+
+# --------------------------------------------------------------------------
+
+echo "======================================================"
+echo "🚀 INICIANDO CREACIÓN DE IMAGEN THIN CLIENT (PXE/NFS)"
+echo "======================================================"
+
+# --- 1. PREPARACIÓN E INSTALACIÓN DE HERRAMIENTAS ---
+echo "1. Instalando dependencias..."
+sudo apt update
+sudo apt install -y debootstrap qemu-user-static nfs-common
+
+# --- 2. DEFINIR Y LIMPIAR DIRECTORIOS ---
+echo "2. Definiendo variables y limpiando directorios..."
+if [ -d "$EXPORT_DIR" ]; then
+    echo "Limpiando contenido de $EXPORT_DIR..."
+    sudo rm -rf $EXPORT_DIR/*
+fi
+sudo mkdir -p $EXPORT_DIR
+echo "Directorio de exportación: $EXPORT_DIR"
+
+# --- 3. PROCESO DE CREACIÓN CON DEBOOTSTRAP ---
+echo "3. Generando el Sistema Base con debootstrap ($DISTRO)..."
+sudo debootstrap --arch=$ARCH $DISTRO $EXPORT_DIR $REPO
+
+# --- 4. MONTAR EL SISTEMA PARA CHROOT ---
+echo "4. Montando sistemas de archivos virtuales (proc, sys, dev)..."
+sudo mount --bind /proc $EXPORT_DIR/proc
+sudo mount --bind /sys $EXPORT_DIR/sys
+sudo mount --bind /dev $EXPORT_DIR/dev
+if [ "$ARCH" != "$(uname -m)" ]; then
+    echo "Montando qemu-user-static para chroot cruzado..."
+    # Montar el binario QEMU para ejecutar comandos si la arquitectura es diferente
+    sudo mount --bind /usr/bin/qemu-$(echo $ARCH | tr 'A-Z' 'a-z')-static $EXPORT_DIR/usr/bin/
+fi
+
+# --------------------------------------------------------------------------
+# --- 5. CONFIGURACIÓN INTERNA (CHROOT INTERACTIVO) ---
+# ESTA FASE ES INTERACTIVA Y REQUIERE INTERVENCIÓN MANUAL
+# --------------------------------------------------------------------------
+echo ""
+echo "======================================================"
+echo ">>> ENTRANDO AL ENTORNO CHROOT. DEBES CONFIGURAR MANUALMENTE:"
+echo "    - 🔑 Contraseña de Root (passwd root)"
+echo "    - 🔧 Configuración de Red/SSH/Locales"
+echo "    - 🐧 Instalación de Kernel (apt install linux-image-amd64)"
+echo "    - 🖥️ Instalación de Clientes Remotos (xorg, freerdp2-x11, etc.)"
+echo "    - 🚀 Configuración de Autoarranque (Script de conexión)"
+echo "    - 💾 Limpiar fstab (/etc/fstab debe estar vacío)"
+echo ">>> ESCRIBE 'exit' PARA SALIR DEL CHROOT UNA VEZ TERMINADO."
+echo "======================================================"
+echo ""
+
+# Ingresar al entorno Chroot
+sudo chroot $EXPORT_DIR /bin/bash
+
+# --- 6. SALIR Y LIMPIAR ---
+echo "6. Saliendo del CHROOT y Desmontando sistemas de archivos..."
+
+# Desmontar en orden inverso
+if [ "$ARCH" != "$(uname -m)" ]; then
+    echo "Desmontando binario qemu-static..."
+    sudo umount $EXPORT_DIR/usr/bin/qemu-$(echo $ARCH | tr 'A-Z' 'a-z')-static
+fi
+
+sudo umount $EXPORT_DIR/dev
+sudo umount $EXPORT_DIR/sys
+sudo umount $EXPORT_DIR/proc
+
+echo "======================================================"
+echo "✅ Imagen Base Creada y Lista en $EXPORT_DIR"
+echo "======================================================"

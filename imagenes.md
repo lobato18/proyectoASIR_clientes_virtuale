@@ -1,6 +1,6 @@
  🐧 Creación de la Imagen Base Linux (Root Filesystem NFS)
 
-Este documento describe el proceso para generar el sistema de archivos raíz (`root filesystem`) mínimo que tu Thin Client cargará desde el servidor mediante **NFS (Network File System)**.
+ proceso para generar el sistema de archivos raíz (`root filesystem`) mínimo que tu Thin Client cargará desde el servidor mediante **NFS (Network File System)**.
 
 Se utiliza la herramienta **`debootstrap`**, la forma estándar de crear una instalación limpia de Debian/Ubuntu.
 
@@ -112,5 +112,6 @@ sudo umount $EXPORT_DIR/sys
 sudo umount $EXPORT_DIR/dev
 # Si usaste qemu:
 # sudo umount $EXPORT_DIR/usr/bin/qemu-amd64-static 
+
 
 echo "✅ Imagen Base Lista en $EXPORT_DIR"

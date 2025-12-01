@@ -1,0 +1,50 @@
+
+---
+
+## 🚀 Arranque sin Disco: Configuración PXE
+
+El arranque PXE es el método estándar para que tu **cliente ligero** cargue un sistema operativo (o un programa de conexión) directamente desde la red, sin necesidad de un disco duro local.
+
+Este proceso requiere configurar tres servicios esenciales en tu **servidor central**.
+
+---
+
+## 🛠️ Servicios de Servidor Requeridos
+
+| Servicio | Función Principal | Configuración Crítica |
+| :--- | :--- | :--- |
+| **1. DHCP** | Asigna una **dirección IP** al cliente y le proporciona la ruta al archivo de arranque. | **Opción 66 (Next Server):** IP del servidor TFTP. **Opción 67 (Boot Filename):** Nombre del bootloader de red (ej., `pxelinux.0`). |
+| **2. TFTP** | Es un servidor de archivos simple que entrega el **primer archivo** que el cliente necesita (el bootloader de red). | Debe alojar el archivo del bootloader (ej., `pxelinux.0` o `wdsnbp.com`) en su directorio raíz y los archivos de configuración inicial. |
+| **3. Almacenamiento del SO** | Contiene el kernel y el sistema de archivos completo del thin client. | Varía según el SO: **NFS** o **Samba** para Linux; **WDS** o **iSCSI** para Windows. |
+
+---
+
+## ⚙️ Flujo del Proceso PXE
+
+El proceso de arranque sigue una secuencia estricta, guiada por la configuración que estableciste en el DHCP y TFTP.
+
+1.  **Encendido e Inicio de PXE:** El thin client arranca y el firmware de su tarjeta de red inicia la rutina PXE.
+2.  **Solicitud DHCP:** El cliente envía una solicitud DHCP para obtener una dirección IP.
+3.  **Respuesta con Bootloader:** El servidor DHCP responde con la **dirección IP** del cliente y le indica la **dirección IP del servidor TFTP** (Opción 66) y el **nombre del archivo de arranque** (Opción 67).
+4.  **Descarga del Bootloader:** El cliente se conecta al servidor TFTP y descarga el archivo especificado (ej., `pxelinux.0`).
+5.  **Descarga del SO/Kernel:** El bootloader de red (ahora en la RAM del cliente) lee un archivo de configuración (ej., `pxelinux.cfg/default`). Este archivo le dice qué **kernel** de Linux o qué **imagen de WinPE** debe descargar.
+6.  **Montaje y Ejecución:** El cliente descarga el SO o el programa de conexión y lo ejecuta. En el caso de Linux, **monta el sistema de archivos raíz completo** a través de la red (NFS).
+
+
+---
+
+## 📝 Pasos Adicionales según el SO
+
+### A. Cliente Ligero Basado en Linux
+
+| Paso | Detalle |
+| :--- | :--- |
+| **Sistema de Archivos** | Configura un **servidor NFS (Network File System)** y exporta el directorio que contiene el sistema de archivos raíz de tu distribución Linux ligera. |
+| **Configuración PXE** | El archivo de configuración de PXE (`/tftpboot/pxelinux.cfg/default`) debe incluir la línea `append initrd=initrd.img root=/dev/nfs nfsroot=<IP_Servidor>:/ruta/a/so`. |
+
+### B. Cliente Ligero Basado en Windows/VDI
+
+| Paso | Detalle |
+| :--- | :--- |
+| **Windows** | Utiliza **Windows Deployment Services (WDS)**. WDS integra los roles de servidor DHCP, TFTP y distribución de imágenes de Windows (WinPE). |
+| **Conexión VDI** | Si el objetivo es solo una conexión de escritorio virtual, el programa que se descarga por PXE debe ser un ejecutable muy pequeño que **inicia directamente el cliente RDP/VNC/PCoIP** hacia tu servidor VDI. |

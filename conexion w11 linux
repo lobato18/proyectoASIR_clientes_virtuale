@@ -1,6 +1,6 @@
 ¡Claro\! Aquí tienes el plan de acción en formato Markdown para arrancar tu Thin Client usando la infraestructura PXE/NFS de **Linux** para, finalmente, conectarte a **Windows 11** vía RDP.
 
-Este documento resume los pasos necesarios para modificar la imagen base de Linux y configurar el autoarranque.
+Este documento resume los pasos necesarios para modificar la imagen base de Linux y configurar el autoarranque. 
 
 -----
 

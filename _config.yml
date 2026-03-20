@@ -1,3 +1,5 @@
 remote_theme: pages-themes/cayman@v0.2.0
 title: Mi Proyecto ASIR
 description: Bienvenido a mi sitio web de clientes virtuales
+google_analytics: # (Opcional, déjalo vacío)
+show_downloads: true # Esto añade botones de "Download .zip" y "Download .tar.gz"

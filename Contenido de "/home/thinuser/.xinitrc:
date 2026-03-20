@@ -1,0 +1,25 @@
+#!/bin/bash
+# Script de autoarranque y conexión RDP
+
+# 1. Configuración del Entorno Gráfico (Opcional)
+xset s off # Deshabilitar salvapantallas
+xset -dpms # Deshabilitar gestión de energía
+
+# 2. Bucle de Conexión y Reconexión
+# Esto asegura que si la conexión RDP se cae, intentará reconectarse.
+while true; do
+    # ----------------------------------------------------
+    # Conexión RDP a Windows 11 (Ajusta la IP y credenciales)
+    # ----------------------------------------------------
+    # /v: Dirección del servidor RDS/Windows 11
+    # /u: Usuario de Windows
+    # /p: Contraseña
+    # /f: Modo pantalla completa (fullscreen)
+    xfreerdp /v:192.168.1.50 /u:MiDominio\\MiUsuario /p:MiContraseña /f /bpp:24
+    
+    # Esperar 5 segundos antes de intentar reconectar si la sesión se cierra
+    sleep 5
+done
+
+# Iniciar un gestor de ventanas básico como fallback (OpenBox)
+exec openbox-session

@@ -1,4 +1,4 @@
-***servidor web instanciar paguina
+***servidor web instanciar pagina
 
 
 🐧 Instalación del Servidor Web Apache2 en Linux

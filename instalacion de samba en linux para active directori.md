@@ -78,6 +78,37 @@ Importante: Tras la instalación, asegúrate de que el archivo /etc/resolv.conf 
 
 Nota de seguridad: El script 01 contiene una contraseña en texto plano (ADMIN_PASS). Una vez usado, borra el script o cámbiale los permisos para que solo root pueda leerlo.
 #!/bin/bash
+# Configuración de Active Directory en Linux (Samba 4)
 
+Este repositorio contiene los scripts necesarios para desplegar un Controlador de Dominio, crear una Unidad Organizativa (OU) y gestionar sus miembros.
+
+## 1. Instalación y Configuración Inicial
+Este script instala Samba y sus dependencias, limpia configuraciones previas y aprovisiona el dominio `tecnolobato.local`.
+
+```bash
+#!/bin/bash
+# Variables de configuración
+REALM="TECNOLOBATO.LOCAL"
+DOMAIN="TECNOLOBATO"
+ADMIN_PASS="TecnoLobato2026!"
+
+# Instalación de paquetes
+apt update
+DEBIAN_FRONTEND=noninteractive apt install -y samba krb5-config krb5-user smbclient
+
+# Limpieza de servicios en conflicto
+systemctl stop smbd nmbd winbind
+systemctl disable smbd nmbd winbind
+systemctl unmask samba-ad-dc
+
+# Aprovisionamiento del dominio
+[ -f /etc/samba/smb.conf ] && mv /etc/samba/smb.conf /etc/samba/smb.conf.bak
+samba-tool domain provision --server-role=dc --use-rfc2307 --dns-backend=SAMBA_INTERNAL \
+  --realm=$REALM --domain=$DOMAIN --adminpass=$ADMIN_PASS
+
+# Configurar Kerberos y arrancar
+cp /var/lib/samba/private/krb5.conf /etc/krb5.conf
+systemctl start samba-ad-dc
+systemctl enable samba-ad-dc
 
 

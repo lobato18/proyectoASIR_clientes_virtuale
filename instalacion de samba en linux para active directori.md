@@ -110,5 +110,42 @@ samba-tool domain provision --server-role=dc --use-rfc2307 --dns-backend=SAMBA_I
 cp /var/lib/samba/private/krb5.conf /etc/krb5.conf
 systemctl start samba-ad-dc
 systemctl enable samba-ad-dc
+# ... código anterior ...
+systemctl start samba-ad-dc
+systemctl enable samba-ad-dc
+``` <-- **Pones esto aquí para cerrar el bloque**
 
+Y a partir de aquí ya puedes escribir normal, por ejemplo:
+
+---
+### Finalización de la tarea
+El servidor ya debería estar operativo. Recuerda reiniciar si los cambios no se aplican de inmediato.
+---
+
+```
+
+crear unidad organizativas
+Una vez el dominio esté activo, usa este script para crear la estructura de tecnolobato.
+
+Bash
+```
+
+#!/bin/bash
+DOMAIN_DN="dc=tecnolobato,dc=local"
+OU_NAME="tecnolobato"
+
+samba-tool ou create "OU=$OU_NAME,$DOMAIN_DN"
+```
+
+3. Agregar Miembros a la OU
+Script interactivo para dar de alta usuarios directamente en el contenedor de tecnolobato
+```
+#!/bin/bash
+OU_TARGET="OU=tecnolobato,dc=tecnolobato,dc=local"
+
+read -p "Nombre del nuevo miembro: " NEW_USER
+read -s -p "Contraseña: " USER_PASS
+
+samba-tool user create "$NEW_USER" "$USER_PASS" --userou="$OU_TARGET"
+```
 

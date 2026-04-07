@@ -1,22 +1,28 @@
 
+📜 1. Script (install.sh)
+
+Déjalo así (solo añado cabecera profesional y buenas prácticas):
+
 #!/bin/bash
+
+set -e  # Detiene el script si hay errores
 
 echo "===================================================="
 echo "    INSTALADOR DE SERVIDOR WEB - TECNOLOBATO        "
 echo "===================================================="
 
 # 1. Actualizar e instalar Apache
-echo "Instalando Apache2..."
+echo "📦 Instalando Apache2..."
 sudo apt update
 sudo apt install -y apache2
 
 # 2. Habilitar y arrancar el servicio
-echo "Iniciando el servicio web..."
+echo "🚀 Iniciando el servicio web..."
 sudo systemctl enable apache2
 sudo systemctl start apache2
 
 # 3. Crear la página de prueba
-echo "Creando página de inicio personalizada..."
+echo "🌐 Creando página de inicio personalizada..."
 cat <<EOF | sudo tee /var/www/html/index.html
 <!DOCTYPE html>
 <html lang="es">
@@ -65,3 +71,79 @@ echo "----------------------------------------------------"
 echo "✅ SERVIDOR CONFIGURADO"
 echo "Puedes acceder escribiendo la IP de tu servidor en el navegador."
 echo "----------------------------------------------------"
+📘 2. README.md (IMPORTANTE para GitHub)
+
+Este es lo que hará que tu repo se vea 🔥:
+
+# 🚀 Instalador de Servidor Web - Tecnolobato
+
+Script automático para instalar y configurar un servidor web con Apache en sistemas Linux (Ubuntu/Debian).
+
+---
+
+## 📦 Características
+
+- Instalación automática de Apache2
+- Configuración del servicio (enable + start)
+- Página web personalizada de prueba
+- Ajuste automático de permisos
+
+---
+
+## ⚙️ Requisitos
+
+- Sistema basado en Debian/Ubuntu
+- Usuario con permisos `sudo`
+- Conexión a Internet
+
+---
+
+## 🚀 Instalación y uso
+
+1. Clona el repositorio:
+
+```bash
+git clone https://github.com/tu-usuario/tecnolobato-web-server.git
+cd tecnolobato-web-server
+Da permisos de ejecución:
+chmod +x install.sh
+Ejecuta el script:
+./install.sh
+🌐 Resultado
+
+Después de la instalación, podrás acceder a la página web desde tu navegador usando:
+
+http://IP_DE_TU_SERVIDOR
+📸 Vista previa
+
+El script crea una página web simple con un mensaje:
+
+"¡Servidor Web Operativo!"
+
+🛠️ Tecnologías usadas
+Apache2
+Bash scripting
+HTML + CSS
+📄 Licencia
+
+Este proyecto es de uso libre para fines educativos.
+
+👨‍💻 Autor
+
+Tecnolobato
+
+
+---
+
+## 🔥 Tips para que quede aún mejor en GitHub
+
+- Añade un `.gitignore` (aunque sea básico)
+- Súbelo con este comando:
+
+```bash
+git init
+git add .
+git commit -m "Primer commit - instalador Apache"
+git branch -M main
+git remote add origin https://github.com/tu-usuario/tecnolobato-web-server.git
+git push -u origin main

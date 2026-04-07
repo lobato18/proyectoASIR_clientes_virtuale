@@ -1,7 +1,7 @@
 💻 Script de Alta de Usuarios (alta_usuarios.sh)
 
 Este script permite registrar usuarios de forma interactiva en el dominio.
-
+bash 
 #!/bin/bash
 # Configuración de la ruta de la OU de destino
 OU_TARGET="OU=tecnolobato,dc=tecnolobato,dc=local"
@@ -32,7 +32,7 @@ else
     echo "Revisa si el usuario ya existe o si el servicio AD está activo."
     echo "----------------------------------------------------"
 fi
-
+bash
 
 🛠️ Instrucciones de uso
 

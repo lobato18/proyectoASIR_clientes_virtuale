@@ -34,7 +34,8 @@ echo "Dominio $REALM creado con éxito."
 2. Script para Crear la Unidad Organizativa (02_crear_ou.sh)
 Explicación: Una Unidad Organizativa (OU) es un contenedor dentro del AD que sirve para organizar objetos (usuarios, grupos, equipos). Este script crea específicamente la carpeta lógica de "tecnolobato".
 
-Bash
+
+```bash
 #!/bin/bash
 # Ajusta el DN según el dominio que pusiste en el script anterior
 DOMAIN_DN="dc=tecnolobato,dc=local"
@@ -67,6 +68,7 @@ if [ $? -eq 0 ]; then
 else
     echo "Error al crear el usuario."
 fi
+```
 Instrucciones de uso rápido
 Dar permisos: chmod +x *.sh
 

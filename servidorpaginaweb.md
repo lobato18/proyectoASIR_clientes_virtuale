@@ -1,38 +1,43 @@
-Configuración de Servidor Web (Apache) - Blog Tecnolobato
+🌐 Configuración Automática de Servidor Web - Blog Tecnolobato
 
-Este script instala Apache y despliega un Blog de Informática moderno como página de inicio.
+Este documento contiene el script maestro que automatiza la instalación, configuración y despliegue del portal informativo.
 
-📝 Descripción del Proyecto
+💻 Script Maestro de Instalación (auto_instalar_blog.sh)
 
-La página generada es un portal de noticias tecnológicas que incluye:
-
-Cabecera Hero: Con el título del proyecto.
-
-Sección de Artículos: Diseño en tarjetas (Cards) con imágenes.
-
-Barra Lateral: Con categorías de informática.
-
-Diseño Responsive: Se ve bien en cualquier dispositivo.
-
-💻 Código del Script de Instalación (instalar_blog.sh)
+Este script realiza todo el proceso de forma autónoma: instala los paquetes, configura el servicio, genera el contenido HTML/CSS y ajusta los permisos de seguridad.
 
 #!/bin/bash
 
 # ====================================================
-#     INSTALADOR DE BLOG INFORMÁTICO - TECNOLOBATO    
+#     INSTALADOR AUTOMÁTICO - PROYECTO TECNOLOBATO    
 # ====================================================
 
-# 1. Instalación de Apache
-echo "Instalando el servidor web..."
-sudo apt update
-sudo apt install -y apache2
+# Función para imprimir separadores
+print_sep() {
+    echo "----------------------------------------------------"
+}
 
-# 2. Configuración del servicio
+clear
+echo "===================================================="
+echo "    DESPLEGANDO SERVIDOR WEB TECNOLOBATO            "
+echo "===================================================="
+
+# 1. Instalación de Dependencias
+print_sep
+echo "🚀 PASO 1: Instalando Apache2 y dependencias..."
+sudo apt update && sudo apt install -y apache2
+
+# 2. Configuración y Activación del Servicio
+print_sep
+echo "⚙️ PASO 2: Configurando el servicio para el arranque..."
 sudo systemctl enable apache2
 sudo systemctl start apache2
 
-# 3. Creación del Home Page (Blog de Informática)
-echo "Generando el portal de Tecnolobato..."
+# 3. Generación del Contenido del Blog
+print_sep
+echo "📝 PASO 3: Generando la interfaz del Blog de Informática..."
+
+# Creamos el archivo index.html con todo el diseño embebido
 cat <<EOF | sudo tee /var/www/html/index.html
 <!DOCTYPE html>
 <html lang="ca">
@@ -80,7 +85,6 @@ cat <<EOF | sudo tee /var/www/html/index.html
             padding: 0 20px;
         }
 
-        /* Secció de Post */
         .blog-posts { display: flex; flex-direction: column; gap: 30px; }
         .card {
             background: white;
@@ -99,7 +103,6 @@ cat <<EOF | sudo tee /var/www/html/index.html
         .card-content { padding: 25px; }
         .card h2 { margin-top: 0; color: var(--primary); }
 
-        /* Barra Lateral */
         aside {
             background: white;
             padding: 25px;
@@ -141,7 +144,6 @@ cat <<EOF | sudo tee /var/www/html/index.html
 
 <div class="container">
     <main class="blog-posts">
-        <!-- Post 1 -->
         <article class="card">
             <div class="card-img">💻</div>
             <div class="card-content">
@@ -151,7 +153,6 @@ cat <<EOF | sudo tee /var/www/html/index.html
             </div>
         </article>
 
-        <!-- Post 2 -->
         <article class="card">
             <div class="card-img">🛡️</div>
             <div class="card-content">
@@ -186,29 +187,42 @@ cat <<EOF | sudo tee /var/www/html/index.html
 </html>
 EOF
 
-# 4. Permisos finalitzats
+# 4. Ajuste de Permisos y Seguridad
+print_sep
+echo "🔒 PASO 4: Ajustando permisos de la carpeta web..."
 sudo chown -R www-data:www-data /var/www/html
 sudo chmod -R 755 /var/www/html
 
-echo "----------------------------------------------------"
-echo "✅ BLOG DE TECNOLOBATO INSTAL·LAT"
-echo "Accedeix mitjançant la teva IP per veure el blog."
-echo "----------------------------------------------------"
+# Finalización
+print_sep
+echo "✅ INSTALACIÓN COMPLETADA"
+echo "El servidor está operativo y el Blog de Tecnolobato ha sido desplegado."
+echo "Puedes acceder desde tu navegador usando la IP local o el dominio."
+echo "===================================================="
 
 
-🛠️ Com utilitzar-lo
+🛠️ Cómo utilizar el Script Maestro
 
-Crea el fitxer: nano instalar_blog.sh.
+Para que la instalación sea totalmente automática, solo debes seguir estos comandos una única vez:
 
-Dóna permisos: chmod +x instalar_blog.sh.
+Crear y editar el archivo:
 
-Executa: sudo ./instalar_blog.sh.
+nano auto_instalar_blog.sh
 
-Al entrar en tu navegador, verás una interfaz de blog profesional con una cabecera azul degradada, iconos y secciones bien organizadas.
 
-Ejecutar la instalación:
+Pegar el código de arriba, guardar y salir.
 
-sudo ./instalar_web.sh
+Habilitar la ejecución:
+
+chmod +x auto_instalar_blog.sh
+
+
+Lanzar la automatización:
+
+sudo ./auto_instalar_blog.sh
+
+
+Una vez finalizado, el script te confirmará el éxito de la operación y el blog estará visible inmediatamente en la red.
 
 
 Para visualizar tu web: Abre el navegador en cualquier dispositivo de tu red y escribe la dirección IP de tu máquina Linux (ejemplo: http://192.168.1.10).

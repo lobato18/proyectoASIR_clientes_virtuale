@@ -214,7 +214,7 @@ echo "======================================================"
 
 
 
-
+````
 Pasos Finales de Configuración
 Asegúrate de que los siguientes puntos estén terminados antes de intentar el arranque del cliente:
 

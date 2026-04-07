@@ -1,27 +1,13 @@
-🚀 Gestión de Usuarios en Active Directory (Samba 4)
-Este apartado contiene la herramienta necesaria para alimentar nuestra Unidad Organizativa (OU) de Tecnolobato con nuevos miembros de forma rápida y segura.
+💻 Script de Alta de Usuarios (alta_usuarios.sh)
 
-📝 Descripción del Script
-El script de Alta de Usuarios es una herramienta interactiva diseñada para administradores. En lugar de ejecutar comandos manuales complejos, el script solicita los datos básicos y realiza la configuración automáticamente en el servidor.
+Este script permite registrar usuarios de forma interactiva en el dominio.
 
-Beneficios de usar este script:
-
-✨ Velocidad: Crea usuarios en segundos sin errores de sintaxis.
-
-🔒 Seguridad: La contraseña se introduce de forma oculta (no se ve mientras escribes).
-
-📁 Orden: Ubica al usuario directamente en el contenedor OU=tecnolobato.
-
-✅ Feedback: Te confirma visualmente si el usuario se creó con éxito o si hubo un error.
-
-💻 Código del Script (alta_usuarios.sh)
-Bash
 #!/bin/bash
 # Configuración de la ruta de la OU de destino
 OU_TARGET="OU=tecnolobato,dc=tecnolobato,dc=local"
 
 echo "===================================================="
-echo "   GESTOR DE ALTA DE USUARIOS - TECNOLOBATO         "
+echo "    GESTOR DE ALTA DE USUARIOS - TECNOLOBATO         "
 echo "===================================================="
 
 # Solicitar datos de forma interactiva
@@ -46,7 +32,10 @@ else
     echo "Revisa si el usuario ya existe o si el servicio AD está activo."
     echo "----------------------------------------------------"
 fi
+
+
 🛠️ Instrucciones de uso
+
 Para ejecutar este script en tu servidor Linux, sigue estos tres pasos:
 
 Crear el archivo: nano alta_usuarios.sh (y pega el código de arriba).
@@ -54,5 +43,3 @@ Crear el archivo: nano alta_usuarios.sh (y pega el código de arriba).
 Dar permisos: chmod +x alta_usuarios.sh.
 
 Ejecutar: sudo ./alta_usuarios.sh.
-
-Nota: Asegúrate de haber ejecutado primero el script de creación de la OU para que el contenedor tecnolobato exista antes de intentar añadir miembros.

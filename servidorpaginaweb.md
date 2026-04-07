@@ -38,6 +38,7 @@ print_sep
 echo "📝 PASO 3: Generando la interfaz del Blog de Informática..."
 
 # Creamos el archivo index.html con todo el diseño embebido
+``bash
 cat <<EOF | sudo tee /var/www/html/index.html
 <!DOCTYPE html>
 <html lang="ca">
@@ -186,6 +187,7 @@ cat <<EOF | sudo tee /var/www/html/index.html
 </body>
 </html>
 EOF
+´´
 
 # 4. Ajuste de Permisos y Seguridad
 print_sep
@@ -201,28 +203,12 @@ echo "Puedes acceder desde tu navegador usando la IP local o el dominio."
 echo "===================================================="
 
 
-🛠️ Cómo utilizar el Script Maestro
+🛠️ Instrucciones de uso
 
-Para que la instalación sea totalmente automática, solo debes seguir estos comandos una única vez:
+Crea el archivo: nano auto_instalar_blog.sh
 
-Crear y editar el archivo:
+Pega el código anterior.
 
-nano auto_instalar_blog.sh
+Dale permisos: chmod +x auto_instalar_blog.sh
 
-
-Pegar el código de arriba, guardar y salir.
-
-Habilitar la ejecución:
-
-chmod +x auto_instalar_blog.sh
-
-
-Lanzar la automatización:
-
-sudo ./auto_instalar_blog.sh
-
-
-Una vez finalizado, el script te confirmará el éxito de la operación y el blog estará visible inmediatamente en la red.
-
-
-Para visualizar tu web: Abre el navegador en cualquier dispositivo de tu red y escribe la dirección IP de tu máquina Linux (ejemplo: http://192.168.1.10).
+Ejecuta: sudo ./auto_instalar_blog.sh

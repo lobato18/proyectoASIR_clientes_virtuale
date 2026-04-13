@@ -1,83 +1,63 @@
 #!/bin/bash
+# ============================================================
+# PROVISIÓN CORREGIDA PARA PROYECTO TECNOLOBATO
+# ============================================================
 
-# --- VARIABLES DEL HOST ---
-VM_NAME="Servidor-AD-PXE"
-ISO_URL="https://cdimage.debian.org/debian-cd/current/amd64/iso-cd/debian-13.4.0-amd64-netinst.iso"
-ISO_PATH="/tmp/debian-13.4.iso"
-NETWORK_BRIDGE="br0"
+# 1. CORRECCIÓN DE IDENTIDAD (Vital para Samba)
+hostnamectl set-hostname servidor
+echo "127.0.1.1 servidor.tecnolobato.local servidor" >> /etc/hosts
 
-# --- 1. PREPARAR RED Y VM (HOST) ---
-echo "--- Configurando Bridge y VM ---"
-# (Crea el bridge si no existe para evitar el error de MTU)
-sudo ip link add name br0 type bridge 2>/dev/null
-sudo ip link set br0 up
-
-virt-install \
-  --name $VM_NAME \
-  --ram 2048 \
-  --vcpus 2 \
-  --disk size=20,format=qcow2 \
-  --network bridge=$NETWORK_BRIDGE,model=virtio \
-  --graphics vnc \
-  --cdrom $ISO_PATH \
-  --noautoconsole
-
-# --- 2. GENERAR EL SCRIPT DE PROVISIÓN (BASADO EN TU GITHUB) ---
-cat <<'EOF' > provisionar_ad_pxe.sh
-#!/bin/bash
-# Ejecutar dentro de la VM después de instalar Debian
-
-# Variables de tu archivo de GitHub
-REALM="TECNOLOBATO.LOCAL"
-DOMAIN="TECNOLOBATO"
-ADMIN_PASS="TecnoLobato2026!"
-EXPORT_DIR="/export/thinclient"
-
-echo "--- Instalando Samba para Active Directory ---"
+# 2. INSTALACIÓN DE PAQUETES
 apt update
-DEBIAN_FRONTEND=noninteractive apt install -y samba krb5-config krb5-user smbclient debootstrap nfs-kernel-server tftpd-hpa pxelinux
+DEBIAN_FRONTEND=noninteractive apt install -y samba krb5-config krb5-user smbclient \
+debootstrap nfs-kernel-server tftpd-hpa pxelinux syslinux-common syslinux-efi
 
-# Limpieza de Samba (según tu script)
-systemctl stop smbd nmbd winbind
-systemctl disable smbd nmbd winbind
-systemctl unmask samba-ad-dc
+# 3. PROVISIÓN AD DC (Limpia)
+systemctl stop smbd nmbd winbind samba-ad-dc 2>/dev/null
 [ -f /etc/samba/smb.conf ] && mv /etc/samba/smb.conf /etc/samba/smb.conf.bak
+rm -rf /var/lib/samba/private/*
 
-# Aprovisionamiento del Dominio
-samba-tool domain provision --server-role=dc --use-rfc2307 --dns-backend=SAMBA_INTERNAL \
-  --realm=$REALM --domain=$DOMAIN --adminpass=$ADMIN_PASS
+samba-tool domain provision \
+  --server-role=dc --use-rfc2307 --dns-backend=SAMBA_INTERNAL \
+  --realm=TECNOLOBATO.LOCAL --domain=TECNOLOBATO \
+  --adminpass='TecnoLobato2026!'
 
-# Configurar Kerberos
 cp /var/lib/samba/private/krb5.conf /etc/krb5.conf
+systemctl unmask samba-ad-dc
 systemctl start samba-ad-dc
-systemctl enable samba-ad-dc
 
-echo "--- Configurando Servicios PXE/NFS ---"
-# (Aquí integramos la parte de Thin Clients)
-mkdir -p $EXPORT_DIR
-echo "$EXPORT_DIR *(rw,sync,no_root_squash,no_subtree_check)" > /etc/exports
-exportfs -a
+# 4. CREACIÓN THIN CLIENT (Con montajes de seguridad)
+mkdir -p /export/thinclient
+debootstrap --arch=amd64 bookworm /export/thinclient http://deb.debian.org/debian/
 
-# Crear Imagen Base para los clientes
-debootstrap --arch=amd64 bookworm $EXPORT_DIR http://deb.debian.org/debian/
-chroot $EXPORT_DIR apt update
-chroot $EXPORT_DIR apt install -y linux-image-amd64 nfs-common
+# Montajes para que el Kernel se instale bien
+mount --bind /dev /export/thinclient/dev
+mount --bind /proc /export/thinclient/proc
+mount --bind /sys /export/thinclient/sys
 
-# Configurar menú de arranque
+chroot /export/thinclient /bin/bash <<EOF
+apt update
+apt install -y linux-image-amd64 nfs-common
+exit
+EOF
+
+# Desmontar después de la instalación
+umount /export/thinclient/dev /export/thinclient/proc /export/thinclient/sys
+
+# 5. CONFIGURACIÓN PXE FINAL
 mkdir -p /var/lib/tftpboot/pxelinux.cfg
 cp /usr/lib/PXELINUX/pxelinux.0 /var/lib/tftpboot/
 cp /usr/lib/syslinux/modules/bios/ldlinux.c32 /var/lib/tftpboot/
-cp $EXPORT_DIR/boot/vmlinuz-* /var/lib/tftpboot/vmlinuz
-cp $EXPORT_DIR/boot/initrd.img-* /var/lib/tftpboot/initrd.img
+cp /export/thinclient/boot/vmlinuz-* /var/lib/tftpboot/vmlinuz
+cp /export/thinclient/boot/initrd.img-* /var/lib/tftpboot/initrd.img
 
+# Configurar el menú apuntando a la IP correcta
 cat <<EOT > /var/lib/tftpboot/pxelinux.cfg/default
 DEFAULT thinclient
 LABEL thinclient
     KERNEL vmlinuz
-    APPEND initrd=initrd.img root=/dev/nfs nfsroot=$(hostname -I | awk '{print $1}'):$EXPORT_DIR rw ip=dhcp
+    APPEND initrd=initrd.img root=/dev/nfs nfsroot=192.168.1.163:/export/thinclient rw ip=dhcp
 EOT
 
-echo "✅ SERVIDOR AD Y PXE LISTO"
-EOF
-
-chmod +x provisionar_ad_pxe.sh
+systemctl restart nfs-kernel-server tftpd-hpa isc-dhcp-server
+echo "✅ PROCESO COMPLETADO SIN ERRORES"

@@ -1,63 +1,95 @@
 #!/bin/bash
 # ============================================================
-# PROVISIÓN CORREGIDA PARA PROYECTO TECNOLOBATO
+# SCRIPT DE DESPLIEGUE TOTAL: PROYECTO TECNOLOBATO
+# Incluye: Hostname, Samba AD DC, PXE, NFS, OU y Usuario
 # ============================================================
 
-# 1. CORRECCIÓN DE IDENTIDAD (Vital para Samba)
+# --- VARIABLES ---
+IP_SERV="192.168.1.163"
+IFACE="enp46s0"
+REALM="TECNOLOBATO.LOCAL"
+DOMAIN="TECNOLOBATO"
+ADMIN_PASS='TecnoLobato2026!'
+EXPORT_DIR="/export/thinclient"
+
+echo "--- INICIANDO PROVISIÓN INTEGRAL TECNOLOBATO ---"
+sleep 2
+
+# 1. IDENTIDAD DEL SERVIDOR (Evita error de Samba)
+echo "[1/7] Configurando identidad del servidor..."
 hostnamectl set-hostname servidor
-echo "127.0.1.1 servidor.tecnolobato.local servidor" >> /etc/hosts
+echo "127.0.1.1 servidor.$REALM servidor" >> /etc/hosts
 
 # 2. INSTALACIÓN DE PAQUETES
+echo "[2/7] Instalando servicios necesarios..."
 apt update
-DEBIAN_FRONTEND=noninteractive apt install -y samba krb5-config krb5-user smbclient \
-debootstrap nfs-kernel-server tftpd-hpa pxelinux syslinux-common syslinux-efi
+DEBIAN_FRONTEND=noninteractive apt install -y samba krb5-config krb5-user \
+smbclient debootstrap nfs-kernel-server tftpd-hpa pxelinux syslinux-common \
+isc-dhcp-server
 
-# 3. PROVISIÓN AD DC (Limpia)
+# 3. PROVISIÓN DE ACTIVE DIRECTORY
+echo "[3/7] Configurando Controlador de Dominio..."
 systemctl stop smbd nmbd winbind samba-ad-dc 2>/dev/null
 [ -f /etc/samba/smb.conf ] && mv /etc/samba/smb.conf /etc/samba/smb.conf.bak
 rm -rf /var/lib/samba/private/*
 
 samba-tool domain provision \
   --server-role=dc --use-rfc2307 --dns-backend=SAMBA_INTERNAL \
-  --realm=TECNOLOBATO.LOCAL --domain=TECNOLOBATO \
-  --adminpass='TecnoLobato2026!'
+  --realm=$REALM --domain=$DOMAIN --adminpass="$ADMIN_PASS"
 
 cp /var/lib/samba/private/krb5.conf /etc/krb5.conf
 systemctl unmask samba-ad-dc
+systemctl enable samba-ad-dc
 systemctl start samba-ad-dc
 
-# 4. CREACIÓN THIN CLIENT (Con montajes de seguridad)
-mkdir -p /export/thinclient
-debootstrap --arch=amd64 bookworm /export/thinclient http://deb.debian.org/debian/
+# 4. ESTRUCTURA DE DOMINIO (OU y Usuario)
+echo "[4/7] Creando estructura en el Active Directory..."
+# Esperamos 5 segundos a que Samba levante del todo
+sleep 5
+samba-tool ou create "OU=tecnolobato,DC=tecnolobato,DC=local"
+samba-tool user add "usuario_test" "TecnoLobato2026!" --userou="OU=tecnolobato"
+echo "✅ OU 'tecnolobato' y usuario 'usuario_test' creados."
 
-# Montajes para que el Kernel se instale bien
-mount --bind /dev /export/thinclient/dev
-mount --bind /proc /export/thinclient/proc
-mount --bind /sys /export/thinclient/sys
+# 5. IMAGEN DEL CLIENTE (Con montajes para Kernel)
+echo "[5/7] Creando imagen de sistema para Thin Clients..."
+mkdir -p $EXPORT_DIR
+debootstrap --arch=amd64 bookworm $EXPORT_DIR http://deb.debian.org/debian/
 
-chroot /export/thinclient /bin/bash <<EOF
+mount --bind /dev $EXPORT_DIR/dev
+mount --bind /proc $EXPORT_DIR/proc
+mount --bind /sys $EXPORT_DIR/sys
+
+chroot $EXPORT_DIR /bin/bash <<EOF
 apt update
 apt install -y linux-image-amd64 nfs-common
 exit
 EOF
 
-# Desmontar después de la instalación
-umount /export/thinclient/dev /export/thinclient/proc /export/thinclient/sys
+umount $EXPORT_DIR/dev $EXPORT_DIR/proc $EXPORT_DIR/sys
 
-# 5. CONFIGURACIÓN PXE FINAL
+# 6. CONFIGURACIÓN PXE / TFTP
+echo "[6/7] Configurando arranque por red..."
 mkdir -p /var/lib/tftpboot/pxelinux.cfg
 cp /usr/lib/PXELINUX/pxelinux.0 /var/lib/tftpboot/
 cp /usr/lib/syslinux/modules/bios/ldlinux.c32 /var/lib/tftpboot/
-cp /export/thinclient/boot/vmlinuz-* /var/lib/tftpboot/vmlinuz
-cp /export/thinclient/boot/initrd.img-* /var/lib/tftpboot/initrd.img
+cp $EXPORT_DIR/boot/vmlinuz-* /var/lib/tftpboot/vmlinuz
+cp $EXPORT_DIR/boot/initrd.img-* /var/lib/tftpboot/initrd.img
 
-# Configurar el menú apuntando a la IP correcta
 cat <<EOT > /var/lib/tftpboot/pxelinux.cfg/default
 DEFAULT thinclient
 LABEL thinclient
     KERNEL vmlinuz
-    APPEND initrd=initrd.img root=/dev/nfs nfsroot=192.168.1.163:/export/thinclient rw ip=dhcp
+    APPEND initrd=initrd.img root=/dev/nfs nfsroot=$IP_SERV:$EXPORT_DIR rw ip=dhcp
 EOT
 
+# 7. NFS Y DHCP
+echo "[7/7] Activando exportaciones NFS y DHCP..."
+echo "$EXPORT_DIR *(rw,sync,no_root_squash,no_subtree_check,insecure)" > /etc/exports
+exportfs -ra
 systemctl restart nfs-kernel-server tftpd-hpa isc-dhcp-server
-echo "✅ PROCESO COMPLETADO SIN ERRORES"
+
+echo "------------------------------------------------------------"
+echo "🚀 ¡SISTEMA TECNOLOBATO LISTO!"
+echo "Dominio: $REALM | Host: servidor"
+echo "Usuario de prueba: usuario_test"
+echo "------------------------------------------------------------"

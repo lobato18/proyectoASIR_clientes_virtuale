@@ -33,125 +33,108 @@ Copia el siguiente contenido en un fichero en tu servidor (ej: `nano install_asi
 ```bash
 #!/bin/bash
 
-# ==========================================
-# CONFIGURACIÓN INICIAL (EDITA ESTO SI ES NECESARIO)
-# ==========================================
-RED_INTERNA_IF="enp0s8"        # Nombre de tu interfaz de red interna (haz 'ip a' para verla)
-SERVER_IP="192.168.1.1"        # La IP fija de tu servidor
-RANGO_DHCP="192.168.1.50,192.168.1.100,12h"
-DIR_TFTP="/srv/tftp"
-DIR_NFS="/srv/nfs/cliente_linux"
+# ============================================================
+# SCRIPT MAESTRO DE DESPLIEGUE: PROYECTO TECNOLOBATO (ASIR)
+# Versión: 2.0 (Corregida para Debian 13 + PXELINUX)
+# ============================================================
 
-# Colores para mensajes
+# --- CONFIGURACIÓN DE ENTORNO ---
+SERVER_IP="192.168.1.146"       # Tu IP actual según 'ip a'
+INTERFACE="enp2s0"               # Tu interfaz de red
+DIR_TFTP="/var/lib/tftpboot"     # Ruta estándar de Debian
+DIR_NFS="/export/thinclient"     # Ruta del sistema raíz
+REALM="TECNOLOBATO.LOCAL"
+
+# Colores para la terminal
 VERDE='\033[0;32m'
-NC='\033[0m' # No Color
+ROJO='\033[0;31m'
+AMARILLO='\033[1;33m'
+NC='\033[0m'
 
-echo -e "${VERDE}=== INICIANDO INSTALACIÓN PROYECTO ASIR PXE ===${NC}"
+echo -e "${VERDE}=== INICIANDO DESPLIEGUE TOTAL TECNOLOBATO ===${NC}"
 
-# 1. INSTALACIÓN DE PAQUETES
-echo -e "${VERDE}[1/7] Instalando paquetes necesarios...${NC}"
+# 1. LIMPIEZA DE CONFLICTOS
+# ------------------------------------------------------------
+echo -e "${AMARILLO}[1/7] Limpiando servicios conflictivos...${NC}"
+sudo systemctl stop dnsmasq 2>/dev/null
+sudo systemctl disable dnsmasq 2>/dev/null
+# Aseguramos que ISC-DHCP-SERVER apunte a la interfaz correcta
+sudo sed -i "s/INTERFACESv4=\".*\"/INTERFACESv4=\"$INTERFACE\"/" /etc/default/isc-dhcp-server
+
+# 2. INSTALACIÓN DE PAQUETES FALTANTES
+# ------------------------------------------------------------
+echo -e "${AMARILLO}[2/7] Instalando binarios de arranque PXE...${NC}"
+sudo apt update
+sudo apt install -y pxelinux syslinux-common nfs-kernel-server tftpd-hpa isc-dhcp-server
+
+# 3. PREPARAR ESTRUCTURA TFTP
+# ------------------------------------------------------------
+echo -e "${AMARILLO}[3/7] Configurando servidor de archivos de arranque (TFTP)...${NC}"
+sudo mkdir -p $DIR_TFTP/pxelinux.cfg
+sudo cp /usr/lib/PXELINUX/pxelinux.0 $DIR_TFTP/
+sudo cp /usr/lib/syslinux/modules/bios/ldlinux.c32 $DIR_TFTP/
+sudo cp /usr/lib/syslinux/modules/bios/libcom32.c32 $DIR_TFTP/ 2>/dev/null
+sudo cp /usr/lib/syslinux/modules/bios/libutil.c32 $DIR_TFTP/ 2>/dev/null
+
+# 4. CONFIGURACIÓN DEL KERNEL EN LA IMAGEN
+# ------------------------------------------------------------
+echo -e "${AMARILLO}[4/7] Asegurando Kernel e Initrd en el sistema cliente...${NC}"
+# Montajes necesarios para chroot
+sudo mount --bind /dev $DIR_NFS/dev
+sudo mount --bind /proc $DIR_NFS/proc
+sudo mount --bind /sys $DIR_NFS/sys
+
+sudo chroot $DIR_NFS /bin/bash <<EOF
 apt update
-apt install -y dnsmasq nfs-kernel-server debootstrap qemu-user-static grub-efi-amd64-signed shim-signed samba
-
-# 2. CONFIGURACIÓN DNSMASQ (DHCP + TFTP)
-echo -e "${VERDE}[2/7] Configurando Dnsmasq...${NC}"
-mv /etc/dnsmasq.conf /etc/dnsmasq.conf.bak
-cat <<EOF > /etc/dnsmasq.conf
-interface=$RED_INTERNA_IF
-dhcp-range=$RANGO_DHCP
-enable-tftp
-tftp-root=$DIR_TFTP
-dhcp-boot=bootx64.efi
-log-dhcp
-EOF
-
-# 3. PREPARAR ESTRUCTURA TFTP Y GRUB
-echo -e "${VERDE}[3/7] Preparando ficheros de arranque UEFI...${NC}"
-mkdir -p $DIR_TFTP/grub/fonts
-# Copiamos el bootloader firmado
-cp /usr/lib/grub/x86_64-efi-signed/grubnetx64.efi.signed $DIR_TFTP/bootx64.efi
-# Copiamos la fuente
-cp /usr/share/grub/unicode.pf2 $DIR_TFTP/grub/fonts/
-# Permisos
-chmod -R 755 $DIR_TFTP
-
-# 4. CREACIÓN DE IMAGEN LINUX (DEBOOTSTRAP)
-echo -e "${VERDE}[4/7] Creando sistema base Linux (Esto tardará unos minutos)...${NC}"
-mkdir -p $DIR_NFS
-# Instalamos Ubuntu Jammy (22.04) base
-debootstrap --arch=amd64 jammy $DIR_NFS http://archive.ubuntu.com/ubuntu/
-
-# 5. CONFIGURACIÓN DENTRO DE LA IMAGEN (CHROOT AUTOMATIZADO)
-echo -e "${VERDE}[5/7] Configurando el cliente Linux internamente...${NC}"
-# Copiamos qemu por si acaso
-cp /usr/bin/qemu-x86_64-static $DIR_NFS/usr/bin/
-# Montamos binds
-mount --bind /dev $DIR_NFS/dev
-mount --bind /dev/pts $DIR_NFS/dev/pts
-mount -t proc /proc $DIR_NFS/proc
-mount -t sysfs /sys $DIR_NFS/sys
-
-# Ejecutamos comandos dentro de la jaula
-chroot $DIR_NFS /bin/bash <<EOF
-# Configurar repositorios
-echo "deb http://archive.ubuntu.com/ubuntu/ jammy main universe" > /etc/apt/sources.list
-apt update
-# Instalar kernel y herramientas de red (SIN PREGUNTAS)
-DEBIAN_FRONTEND=noninteractive apt install -y linux-image-generic initramfs-tools nfs-common iproute2 nano
-# Crear usuario
+DEBIAN_FRONTEND=noninteractive apt install -y linux-image-amd64 nfs-common
+# Configuración de usuarios solicitada
 echo "root:asir" | chpasswd
-useradd -m -s /bin/bash alumno
+id -u alumno >/dev/null 2>&1 || useradd -m -s /bin/bash alumno
 echo "alumno:asir" | chpasswd
-# Hostname
-echo "cliente-virtual" > /etc/hostname
-# Fstab
-echo "proc /proc proc defaults 0 0" > /etc/fstab
-# Configurar initramfs para arranque NFS
-sed -i 's/BOOT=local/BOOT=nfs/' /etc/initramfs-tools/initramfs.conf
-update-initramfs -u
+exit
 EOF
 
-# Desmontamos
-umount $DIR_NFS/sys
-umount $DIR_NFS/proc
-umount $DIR_NFS/dev/pts
-umount $DIR_NFS/dev
+sudo umount $DIR_NFS/dev $DIR_NFS/proc $DIR_NFS/sys
 
-# 6. EXPORTAR KERNEL Y NFS
-echo -e "${VERDE}[6/7] Exportando Kernel y configurando NFS...${NC}"
-# Copiar kernel e initrd al TFTP
-cp $DIR_NFS/boot/vmlinuz* $DIR_TFTP/vmlinuz-cliente
-cp $DIR_NFS/boot/initrd.img* $DIR_TFTP/initrd-cliente.img
-chmod 644 $DIR_TFTP/vmlinuz-cliente $DIR_TFTP/initrd-cliente.img
+# 5. EXPORTAR ARCHIVOS DE ARRANQUE
+# ------------------------------------------------------------
+echo -e "${AMARILLO}[5/7] Copiando archivos de arranque al directorio TFTP...${NC}"
+# Buscamos los archivos más recientes generados en el paso anterior
+KERNEL_REAL=$(ls -t $DIR_NFS/boot/vmlinuz-* | head -1)
+INITRD_REAL=$(ls -t $DIR_NFS/boot/initrd.img-* | head -1)
 
-# Configurar /etc/exports
-echo "$DIR_NFS *(rw,sync,no_root_squash,no_subtree_check)" >> /etc/exports
-exportfs -a
+sudo cp "$KERNEL_REAL" $DIR_TFTP/vmlinuz
+sudo cp "$INITRD_REAL" $DIR_TFTP/initrd.img
+sudo chmod 644 $DIR_TFTP/vmlinuz $DIR_TFTP/initrd.img
 
-# 7. GENERAR MENÚ GRUB
-echo -e "${VERDE}[7/7] Creando menú de arranque...${NC}"
-cat <<EOF > $DIR_TFTP/grub/grub.cfg
-set timeout=10
-set default=0
+# 6. GENERAR MENÚ DE ARRANQUE PXE
+# ------------------------------------------------------------
+echo -e "${AMARILLO}[6/7] Creando menú de arranque default...${NC}"
+cat <<EOF | sudo tee $DIR_TFTP/pxelinux.cfg/default
+DEFAULT debian
+PROMPT 0
+TIMEOUT 30
 
-menuentry "Arrancar Cliente Linux (NFS)" {
-    echo "Cargando Kernel..."
-    linux /vmlinuz-cliente root=/dev/nfs nfsroot=$SERVER_IP:$DIR_NFS rw ip=dhcp
-    echo "Cargando Initrd..."
-    initrd /initrd-cliente.img
-}
-
-menuentry "Instalador Windows (Requiere config extra)" {
-    echo "Falta configurar WinPE y Samba/iSCSI..."
-}
+LABEL debian
+    MENU LABEL Cliente Ligero Debian (TecnoLobato)
+    KERNEL vmlinuz
+    APPEND initrd=initrd.img root=/dev/nfs nfsroot=$SERVER_IP:$DIR_NFS rw ip=dhcp
 EOF
 
-# REINICIO DE SERVICIOS
-systemctl restart dnsmasq
-systemctl restart nfs-kernel-server
+# 7. EXPORTACIÓN NFS Y REINICIO DE SERVICIOS
+# ------------------------------------------------------------
+echo -e "${AMARILLO}[7/7] Aplicando exportaciones NFS y reiniciando motores...${NC}"
+echo "$DIR_NFS *(rw,sync,no_root_squash,no_subtree_check,insecure)" | sudo tee /etc/exports
+sudo exportfs -ra
 
-echo -e "${VERDE}=== INSTALACIÓN COMPLETADA ===${NC}"
-echo "Usuario Linux Cliente: alumno / Password: asir"
-echo "Usuario Root Cliente: root / Password: asir"
-echo "Asegúrate de que la interfaz $RED_INTERNA_IF tenga la IP $SERVER_IP"
+sudo systemctl restart isc-dhcp-server
+sudo systemctl restart tftpd-hpa
+sudo systemctl restart nfs-kernel-server
+
+echo -e "${VERDE}============================================================${NC}"
+echo -e "${VERDE}🚀 DESPLIEGUE COMPLETADO CON ÉXITO${NC}"
+echo -e "Servidor IP: $SERVER_IP"
+echo "Usuario cliente: alumno / asir"
+echo "Root cliente: root / asir"
+echo -e "${VERDE}============================================================${NC}"
 ```

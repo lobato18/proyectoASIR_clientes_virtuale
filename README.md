@@ -176,27 +176,30 @@ Se personaliza el archivo `unattend.xml` para que el cliente Windows se una auto
 </UnattendedJoin>
 ```
 ## 5. Pruebas y Resultados
-###5.1. Protocolo de Pruebas
+### 5.1. Protocolo de Pruebas
 
 Se utiliza un cliente virtual con:
 
 0 GB de disco duro
 4 GB de RAM
-##5.2. Resultados Obtenidos
+## 5.2. Resultados Obtenidos
 Arranque PXE: Exitoso. El cliente carga Windows PE desde el servidor Linux en memoria RAM.
 Autenticación: El usuario inicia sesión contra el AD de Samba 4.
 Persistencia de Datos: Se crea un archivo en el Escritorio del cliente y se verifica su existencia física en el servidor Linux en la ruta:
 /srv/samba/perfiles/
 Consumo de Recursos: El servidor Linux mantiene un consumo bajo de CPU, demostrando alta eficiencia comparado con Windows Server.
 #6. Conclusiones y Futuras Líneas
-###6.1. Conclusiones
+
+### 6.1. Conclusiones
 
 Se ha cumplido el objetivo de crear un sistema de despliegue centralizado donde Linux gestiona la identidad y el almacenamiento, y Windows provee la interfaz de usuario. La solución es:
 
 Escalable
 Segura
 De bajo mantenimiento técnico
-##6.2. Futuras Líneas de Desarrollo
+
+## 6.2. Futuras Líneas de Desarrollo
+
 VDI con Linux: Implementar escritorios virtuales completos mediante KVM en el servidor.
 Alta Disponibilidad: Configurar un segundo DC de Samba 4 para evitar puntos únicos de fallo.
 Seguridad Avanzada: Implementar autenticación de doble factor (2FA) en el inicio de sesión del Thin Client.

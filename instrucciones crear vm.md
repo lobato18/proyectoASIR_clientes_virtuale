@@ -29,7 +29,7 @@ sudo ip link add name br0 type bridge
 sudo ip link set dev br0 up
 Configuración persistente (Netplan)
 sudo nano /etc/netplan/00-installer-config.yaml
-
+```
 Ejemplo:
 
 network:

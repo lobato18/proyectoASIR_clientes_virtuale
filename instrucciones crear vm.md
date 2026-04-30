@@ -60,11 +60,15 @@ Configuración del dominio
 Realm: TECNOLOBATO.LOCAL
 Dominio: TECNOLOBATO
 Política de contraseñas (Opcional)
+
 sudo samba-tool domain passwordsettings set --complexity=off
 sudo samba-tool domain passwordsettings set --min-pwd-length=1
+
 Gestión de usuarios
+
 sudo bash gestion_usuarios.sh
 OU principal: TecnoLobato
+
 🖥️ Fase 3: Preparación de Virtualización
 Permisos de ISOs
 chmod +x /home/lobato
@@ -72,6 +76,7 @@ chmod +x /home/lobato/Descargas
 Instalar dependencias
 sudo apt update
 sudo apt install -y qemu-kvm libvirt-daemon-system virtinst bridge-utils
+
 💻 Fase 4: Despliegue de Clientes
 Crear VM maestra
 sudo bash create_vm.sh
@@ -86,6 +91,7 @@ sudo mkdir -p /srv/pxe/templates/
 sudo cp /var/lib/libvirt/images/pclobato.qcow2 /srv/pxe/templates/windows10_base.qcow2
 Clonación automática
 sudo bash crear_cliente.sh
+
 📡 Fase 5: PXE (En progreso)
 
 Scripts disponibles:
@@ -95,6 +101,7 @@ import_iso.sh → preparación de imágenes PXE
 Ruta de configuración:
 
 /var/lib/tftpboot/pxelinux.cfg/default
+
 📊 Fase 6: Monitorización y Control
 Comandos clave
 # Ver VMs
@@ -118,6 +125,7 @@ Discos VM	/var/lib/libvirt/images/
 Plantillas	/srv/pxe/templates/
 Samba	/etc/samba/smb.conf
 PXE	/var/lib/tftpboot/
+
 🧰 Scripts del Proyecto
 Script	Función	Estado
 dominio.sh	Configuración AD DC	✅
@@ -125,6 +133,7 @@ gestion_usuarios.sh	Gestión de usuarios	✅
 create_vm.sh	Crear VM base	⚙️
 crear_cliente.sh	Clonar clientes	⏳
 import_iso.sh	PXE	🧪
+
 🚀 Estado del Proyecto
 ✔️ Dominio funcional
 ✔️ Virtualización operativa
